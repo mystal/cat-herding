@@ -120,13 +120,14 @@ impl Dog {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CatType {
     Basic,
     Kitten,
     Fat,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CatState {
     Flee,
     Idle,

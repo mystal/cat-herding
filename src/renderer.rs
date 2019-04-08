@@ -466,9 +466,10 @@ impl GameRenderer {
     }
 
     fn draw_world(&mut self, dt: f32, world: &GameWorld, camera: &Camera, window: &mut Window) {
-        window.set_view(View::new(Rectangle::new_sized((400, 300))));
-
         window.clear(Color::WHITE);
+        window.flush();
+
+        window.set_view(View::new(Rectangle::new_sized((400, 300))));
 
         //let draw_params = SpriteDrawParams::new()
         //    .magnify_filter(MagnifySamplerFilter::Nearest)
@@ -500,76 +501,56 @@ impl GameRenderer {
             Ok(())
         });
 
-        //// Draw cats!
-        //for cat in &world.cats {
-        //    let mut sprite = if cat.state == CatState::InPen {
-        //        match cat.cat_type {
-        //        self.basic_cat_idle.execute(|anim| {
-        //            let image = anim.current_frame();
-        //            let trans = Transform::scale((3.0, 3.0));
-        //            window.draw_ex(&image.area().with_center((380.0, 340.0)),
-        //                           Background::Blended(image, CAT_COLORS[0]), trans, 0.0);
-        //            Ok(())
-        //        });
-        //            CatType::Basic => self.basic_cat_idle_animation.current_key_frame(self.game_time)
-        //                .draw(cat.pos.x, cat.pos.y),
-        //            CatType::Kitten => self.kitten_idle_animation.current_key_frame(self.game_time)
-        //                .draw(cat.pos.x, cat.pos.y),
-        //            CatType::Fat => self.fat_cat_idle_animation.current_key_frame(self.game_time)
-        //                .draw(cat.pos.x, cat.pos.y),
-        //        }
-        //    } else if cat.state == CatState::Cannonballing {
-        //        match cat.cat_type {
-        //            CatType::Basic => self.basic_cat_ball_animation.current_key_frame(self.game_time)
-        //                .draw(cat.pos.x, cat.pos.y),
-        //            CatType::Fat => self.fat_cat_ball_animation.current_key_frame(self.game_time)
-        //                .draw(cat.pos.x, cat.pos.y),
-        //            CatType::Kitten => {
-        //                //kitten never goes into the cannonballing state
-        //                self.kitten_idle_animation.current_key_frame(self.game_time)
-        //                    .draw(cat.pos.x, cat.pos.y)
-        //            }
-        //        }
-        //    } else {
-        //        match cat.cat_type {
-        //            CatType::Basic => self.basic_cat_walk_animation.current_key_frame(self.game_time)
-        //                .draw(cat.pos.x, cat.pos.y),
-        //            CatType::Kitten => self.kitten_walk_animation.current_key_frame(self.game_time)
-        //                .draw(cat.pos.x, cat.pos.y),
-        //            CatType::Fat => self.fat_cat_walk_animation.current_key_frame(self.game_time)
-        //                .draw(cat.pos.x, cat.pos.y),
-        //        }
-        //    };
-        //    sprite.set_flip_x(cat.facing == Facing::Right);
-        //    let color = cgmath::vec3(cat.color[0], cat.color[1], cat.color[2])
-        //        .mul_element_wise(cgmath::vec3(1.0, 1.0 - cat.normalized_jitter(), 1.0 - cat.normalized_jitter()));
-        //    sprite.set_color(color);
-        //    self.sprite.draw(&sprite, draw_params, target);
-        //}
+        // Draw cats!
+        for cat in &world.cats {
+            let anim = match (cat.state, cat.cat_type) {
+                (CatState::InPen, CatType::Basic) => &mut self.basic_cat_idle,
+                (CatState::InPen, CatType::Kitten) => &mut self.kitten_idle,
+                (CatState::InPen, CatType::Fat) => &mut self.fat_cat_idle,
+
+                (CatState::Cannonballing, CatType::Basic) => &mut self.basic_cat_ball,
+                // NOTE: Kitten never goes into the cannonballing state.
+                (CatState::Cannonballing, CatType::Kitten) => &mut self.kitten_idle,
+                (CatState::Cannonballing, CatType::Fat) => &mut self.fat_cat_ball,
+
+                (_, CatType::Basic) => &mut self.basic_cat_walk,
+                (_, CatType::Kitten) => &mut self.kitten_walk,
+                (_, CatType::Fat) => &mut self.fat_cat_walk,
+            };
+            let trans = Transform::scale((if cat.facing == Facing::Right {
+                -1.0
+            } else {
+                1.0
+            }, 1.0));
+            let color = cat.color
+                .multiply(Color { r: 1.0, g: 1.0 - cat.normalized_jitter(), b: 1.0 - cat.normalized_jitter(), a: 1.0 });
+            anim.execute(|anim| {
+                let image = anim.current_frame();
+                window.draw_ex(&image.area().with_center((cat.pos.x, cat.pos.y)),
+                               Background::Blended(image, color), trans, 0.0);
+                Ok(())
+            });
+        }
 
         // Draw dog, woof.
         match world.dog.dog_state {
             DogState::Chasing | DogState::Blinking(true) => {
+                let anim = if world.dog.vel.is_zero() {
+                    &mut self.wizard_dog_idle
+                } else {
+                    &mut self.wizard_dog_run
+                };
                 let trans = Transform::scale((if world.dog.facing == Facing::Right {
                     -1.0
                 } else {
                     1.0
                 }, 1.0));
-                if world.dog.vel.is_zero() {
-                    self.wizard_dog_idle.execute(|anim| {
-                        let image = anim.current_frame();
-                        window.draw_ex(&image.area().with_center((world.dog.pos.x, world.dog.pos.y)),
-                                       Background::Img(image), trans, 0.0);
-                        Ok(())
-                    });
-                } else {
-                    self.wizard_dog_run.execute(|anim| {
-                        let image = anim.current_frame();
-                        window.draw_ex(&image.area().with_center((world.dog.pos.x, world.dog.pos.y)),
-                                       Background::Img(image), trans, 0.0);
-                        Ok(())
-                    });
-                }
+                anim.execute(|anim| {
+                    let image = anim.current_frame();
+                    window.draw_ex(&image.area().with_center((world.dog.pos.x, world.dog.pos.y)),
+                                   Background::Img(image), trans, 0.0);
+                    Ok(())
+                });
             }
             DogState::Blinking(false) => {}
         }
