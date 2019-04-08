@@ -496,8 +496,8 @@ impl GameRenderer {
         // Draw cat box.
         self.cat_box.execute(|image| {
             let pos = world.cat_box().pos;
-            window.draw(&image.area().with_center((pos.x, pos.y)),
-                        Background::Img(image));
+            window.draw_ex(&image.area().with_center((pos.x, pos.y)),
+                           Background::Img(image), Transform::IDENTITY, 1);
             Ok(())
         });
 
@@ -527,7 +527,7 @@ impl GameRenderer {
             anim.execute(|anim| {
                 let image = anim.current_frame();
                 window.draw_ex(&image.area().with_center((cat.pos.x, cat.pos.y)),
-                               Background::Blended(image, color), trans, 0.0);
+                               Background::Blended(image, color), trans, 2);
                 Ok(())
             });
         }
@@ -548,7 +548,7 @@ impl GameRenderer {
                 anim.execute(|anim| {
                     let image = anim.current_frame();
                     window.draw_ex(&image.area().with_center((world.dog.pos.x, world.dog.pos.y)),
-                                   Background::Img(image), trans, 0.0);
+                                   Background::Img(image), trans, 3);
                     Ok(())
                 });
             }
