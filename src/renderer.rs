@@ -47,7 +47,6 @@ pub struct GameRenderer {
 
 impl GameRenderer {
     pub fn new() -> Self {
-
         // Load textures.
         let start_menu = Asset::new(Image::load("start_menu_background.png"));
         let how_to_play = Asset::new(Image::load("how_to_play.png"));
@@ -140,7 +139,7 @@ impl GameRenderer {
                 Rectangle::new((64, 0), (32, 32)),
                 Rectangle::new((96, 0), (32, 32)),
             ];
-            Animation::from_spritesheet(image, regions.into_iter().cloned(), 12)
+            Animation::from_spritesheet(image, regions.into_iter().cloned(), 6)
         }));
 
         let linda_cat = Asset::new(Image::load("credits/linda_cat.png").map(|image| {
@@ -228,76 +227,78 @@ impl GameRenderer {
         }
     }
 
-    pub fn render(&mut self, window: &mut Window, dt: f32, world: &GameWorld, camera: &Camera) {
-        self.game_time += dt;
+    pub fn tick_animations(&mut self, _dt: f32) {
+        // NOTE: If you want to actually use dt.
+        //self.game_time += dt;
+        //while self.game_time >= (1.0 / 60.0) {
+        //    self.game_time -= 1.0 / 60.0;
+        //}
 
-        while self.game_time >= (1.0 / 60.0) {
-            self.game_time -= 1.0 / 60.0;
+        // Tick all the animations!
+        self.basic_cat_walk.execute(|anim| {
+            anim.tick();
+            Ok(())
+        }).expect("Failed to tick basic_cat_walk");
+        self.basic_cat_idle.execute(|anim| {
+            anim.tick();
+            Ok(())
+        }).expect("Failed to tick basic_cat_idle");
+        self.basic_cat_ball.execute(|anim| {
+            anim.tick();
+            Ok(())
+        }).expect("Failed to tick basic_cat_ball");
+        self.fat_cat_idle.execute(|anim| {
+            anim.tick();
+            Ok(())
+        }).expect("Failed to tick fat_cat_idle");
+        self.fat_cat_walk.execute(|anim| {
+            anim.tick();
+            Ok(())
+        }).expect("Failed to tick fat_cat_walk");
+        self.fat_cat_ball.execute(|anim| {
+            anim.tick();
+            Ok(())
+        }).expect("Failed to tick fat_cat_ball");
+        self.kitten_idle.execute(|anim| {
+            anim.tick();
+            Ok(())
+        }).expect("Failed to tick kitten_idle");
+        self.kitten_walk.execute(|anim| {
+            anim.tick();
+            Ok(())
+        }).expect("Failed to tick kitten_walk");
+        self.wizard_dog_idle.execute(|anim| {
+            anim.tick();
+            Ok(())
+        }).expect("Failed to tick wizard_dog_idle");
+        self.wizard_dog_run.execute(|anim| {
+            anim.tick();
+            Ok(())
+        }).expect("Failed to tick wizard_dog_run");
 
-            // Tick all the animations!
-            self.basic_cat_walk.execute(|anim| {
-                anim.tick();
-                Ok(())
-            }).expect("Failed to tick basic_cat_walk");
-            self.basic_cat_idle.execute(|anim| {
-                anim.tick();
-                Ok(())
-            }).expect("Failed to tick basic_cat_idle");
-            self.basic_cat_ball.execute(|anim| {
-                anim.tick();
-                Ok(())
-            }).expect("Failed to tick basic_cat_ball");
-            self.fat_cat_idle.execute(|anim| {
-                anim.tick();
-                Ok(())
-            }).expect("Failed to tick fat_cat_idle");
-            self.fat_cat_walk.execute(|anim| {
-                anim.tick();
-                Ok(())
-            }).expect("Failed to tick fat_cat_walk");
-            self.fat_cat_ball.execute(|anim| {
-                anim.tick();
-                Ok(())
-            }).expect("Failed to tick fat_cat_ball");
-            self.kitten_idle.execute(|anim| {
-                anim.tick();
-                Ok(())
-            }).expect("Failed to tick kitten_idle");
-            self.kitten_walk.execute(|anim| {
-                anim.tick();
-                Ok(())
-            }).expect("Failed to tick kitten_walk");
-            self.wizard_dog_idle.execute(|anim| {
-                anim.tick();
-                Ok(())
-            }).expect("Failed to tick wizard_dog_idle");
-            self.wizard_dog_run.execute(|anim| {
-                anim.tick();
-                Ok(())
-            }).expect("Failed to tick wizard_dog_run");
+        self.linda_cat.execute(|anim| {
+            anim.tick();
+            Ok(())
+        }).expect("Failed to tick linda_cat");
+        self.morgan_kitten.execute(|anim| {
+            anim.tick();
+            Ok(())
+        }).expect("Failed to tick morgan_kitten");
+        self.justin_spin.execute(|anim| {
+            anim.tick();
+            Ok(())
+        }).expect("Failed to tick justin_spin");
+        self.gabe_dog.execute(|anim| {
+            anim.tick();
+            Ok(())
+        }).expect("Failed to tick gabe_dog");
+        self.guest_fox.execute(|anim| {
+            anim.tick();
+            Ok(())
+        }).expect("Failed to tick guest_fox");
+    }
 
-            self.linda_cat.execute(|anim| {
-                anim.tick();
-                Ok(())
-            }).expect("Failed to tick linda_cat");
-            self.morgan_kitten.execute(|anim| {
-                anim.tick();
-                Ok(())
-            }).expect("Failed to tick morgan_kitten");
-            self.justin_spin.execute(|anim| {
-                anim.tick();
-                Ok(())
-            }).expect("Failed to tick justin_spin");
-            self.gabe_dog.execute(|anim| {
-                anim.tick();
-                Ok(())
-            }).expect("Failed to tick gabe_dog");
-            self.guest_fox.execute(|anim| {
-                anim.tick();
-                Ok(())
-            }).expect("Failed to tick guest_fox");
-        }
-
+    pub fn render(&mut self, window: &mut Window, world: &GameWorld, camera: &Camera) {
         match world.game_state {
             GameState::StartMenu => {
                 // Draw start menu splash screen!
@@ -424,11 +425,11 @@ impl GameRenderer {
                 window.flush();
             },
             GameState::Running | GameState::Won => {
-                self.draw_world(dt, world, camera, window);
-                self.draw_ui(dt, world, window);
+                self.draw_world(world, camera, window);
+                self.draw_ui(world, window);
             },
             GameState::GameOver => {
-                self.draw_world(dt, world, camera, window);
+                self.draw_world(world, camera, window);
 
                 //let projection = cgmath::ortho(0.0, config::SCREEN_SIZE.x as f32,
                 //                               config::SCREEN_SIZE.y as f32, 0.0,
@@ -465,15 +466,10 @@ impl GameRenderer {
         }
     }
 
-    fn draw_world(&mut self, dt: f32, world: &GameWorld, camera: &Camera, window: &mut Window) {
+    fn draw_world(&mut self, world: &GameWorld, camera: &Camera, window: &mut Window) {
         window.clear(Color::WHITE);
-        window.flush();
 
         window.set_view(View::new(Rectangle::new_sized((400, 300))));
-
-        //let draw_params = SpriteDrawParams::new()
-        //    .magnify_filter(MagnifySamplerFilter::Nearest)
-        //    .alpha(true);
 
         // Background
         // TODO: No wrap function support in quicksilver (yet)...
@@ -559,22 +555,18 @@ impl GameRenderer {
     }
 
 
-    fn draw_ui(&mut self, _dt: f32, world: &GameWorld, window: &mut Window) {
+    fn draw_ui(&mut self, world: &GameWorld, window: &mut Window) {
         window.set_view(View::new(Rectangle::new_sized((800, 600))));
 
-        //let projection = cgmath::ortho(0.0, config::SCREEN_SIZE.x as f32,
-        //                               config::SCREEN_SIZE.y as f32, 0.0,
-        //                               -1.0, 1.0);
-        //let draw_params = SpriteDrawParams::new()
-        //    .magnify_filter(MagnifySamplerFilter::Nearest)
-        //    .alpha(true);
+        // Draw cat face next to score!
+        let trans = Transform::scale((3.0, 3.0));
+        self.cat_face.execute(|image| {
+            window.draw_ex(&image.area().with_center((660.0, 25.0)),
+                           Background::Img(image), trans, 0);
+            Ok(())
+        });
 
-        //// Draw cat face next to score!
-        //self.sprite.set_projection_matrix(projection);
-        //let mut sprite = self.cat_face.draw(660.0, 25.0);
-        //sprite.set_scale(cgmath::vec2(3.0, 3.0));
-        //self.sprite.draw(&sprite, draw_params, target);
-        //// Draw score text!
+        // Draw score text!
         //let score_text = format!("{:02}/{:02}", world.cats_scored, world.level.num_cats);
         //self.text.draw_text(&score_text, &self.font, [0.0, 0.0, 0.0],
         //                    40, 697.0, 7.0, 800, &projection, target);

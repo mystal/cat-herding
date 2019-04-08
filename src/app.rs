@@ -56,6 +56,7 @@ impl State for GameApp {
         //    self.sounds.background_music.play();
         //}
         self.world.update(window, dt);
+        self.renderer.tick_animations(0.0);
 
         Ok(())
     }
@@ -63,11 +64,10 @@ impl State for GameApp {
     fn draw(&mut self, window: &mut Window) -> Result<()> {
         //let dt = self.last_update.elapsed();
         //let dt = dt.as_secs() as f32 + (dt.subsec_nanos() as f32 / 1_000_000_000.0);
-        let dt = 0.0;
 
         //dbg!(dt);
 
-        self.renderer.render(window, dt, &self.world, &self.camera);
+        self.renderer.render(window, &self.world, &self.camera);
 
         //self.last_update = Instant::now();
 
