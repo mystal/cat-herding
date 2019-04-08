@@ -1,7 +1,11 @@
-extern crate cgmath;
-extern crate midgar;
-extern crate rand;
-extern crate ears;
+#[cfg(target_arch = "wasm32")]
+#[macro_use]
+extern crate stdweb;
+
+use quicksilver::{
+    geom::Vector,
+    lifecycle::{Settings, run},
+};
 
 mod app;
 mod config;
@@ -13,9 +17,13 @@ mod sounds;
 mod party;
 
 fn main() {
-    let app_config = midgar::MidgarAppConfig::new()
-        .with_title("Cat Chaser")
-        .with_screen_size((config::SCREEN_SIZE.x, config::SCREEN_SIZE.y));
-    let app: midgar::MidgarApp<app::GameApp> = midgar::MidgarApp::new(app_config);
-    app.run();
+    #[cfg(target_arch = "wasm32")]
+    ::std::panic::set_hook(Box::new(|info| {
+        console!(log, info.to_string());
+    }));
+
+    run::<app::GameApp>(
+        "Cat Chaser",
+        Vector::new(config::SCREEN_SIZE.x, config::SCREEN_SIZE.y),
+        Settings::default());
 }

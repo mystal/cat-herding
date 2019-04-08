@@ -1,7 +1,9 @@
-use midgar::Midgar;
-
 use cgmath::{self, InnerSpace, Vector2, Zero};
-use midgar::KeyCode;
+use quicksilver::{
+    input::{ButtonState, Key},
+    lifecycle::{Window},
+};
+
 use crate::entities::*;
 use crate::sounds::Sounds;
 use crate::level::{Level, MAX_LEVEL};
@@ -9,7 +11,7 @@ use crate::party::Party;
 
 const MOVE_SPEED: f32 = 150.0;
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum GameState {
     StartMenu,
     Credits,
@@ -27,27 +29,21 @@ pub struct GameWorld {
     pub cats_scored: u32,
 
     pub the_party: Party,
+
+    pub sounds: Sounds,
 }
 
 impl GameWorld {
     pub fn new() -> Self {
         let level = Level::new(1);
-        let mut yip_sound = Sounds::dog_yip();
-//        yip_sound.set_volume(3.0);
         let dog = Dog {
             pos: level.cat_box.pos,
             vel: Vector2::zero(),
             size: cgmath::Vector2::new(30.0, 30.0),
             facing: Facing::Left,
-            left_key: KeyCode::Left,
-            right_key: KeyCode::Right,
-            up_key: KeyCode::Up,
-            down_key: KeyCode::Down,
             dog_state: DogState::Chasing,
             hit_time: 0.0,
             hit_frame: 0,
-            yip_sound,
-            woof_sound: Sounds::dog_woof(),
         };
         let cats = level.generate_cats();
 
@@ -58,17 +54,22 @@ impl GameWorld {
             cats,
             cats_scored: 0,
             the_party: Party::new(),
+            sounds: Sounds::new(),
         }
     }
 
-    pub fn update(&mut self, midgar: &Midgar, dt: f32) {
+    pub fn update(&mut self, window: &Window, dt: f32) {
+        //self.sounds.try_play_music();
+
+        //dbg!(self.game_state);
+
         match self.game_state {
-            GameState::StartMenu => self.update_start_menu(midgar, dt),
-            GameState::Credits => self.update_credits(midgar, dt),
-            GameState::HowToPlay => self.update_how_to_play(midgar, dt),
-            GameState::Running => self.update_running(midgar, dt),
-            GameState::Won => self.update_won(midgar, dt),
-            GameState::GameOver => self.update_game_over(midgar, dt),
+            GameState::StartMenu => self.update_start_menu(window, dt),
+            GameState::Credits => self.update_credits(window, dt),
+            GameState::HowToPlay => self.update_how_to_play(window, dt),
+            GameState::Running => self.update_running(window, dt),
+            GameState::Won => self.update_won(window, dt),
+            GameState::GameOver => self.update_game_over(window, dt),
         }
     }
 
@@ -89,28 +90,30 @@ impl GameWorld {
         self.restart();
     }
 
-    fn update_start_menu(&mut self, midgar: &Midgar, _dt: f32) {
-        if midgar.input().was_key_pressed(KeyCode::Return) {
+    fn update_start_menu(&mut self, window: &Window, _dt: f32) {
+        if window.keyboard()[Key::Return] == ButtonState::Held {
+        //if window.keyboard()[Key::Return] == ButtonState::Pressed {
             self.game_state = GameState::HowToPlay;
-        } else if midgar.input().was_key_pressed(KeyCode::Tab) {
+        } else if window.keyboard()[Key::Tab] == ButtonState::Pressed {
             self.game_state = GameState::Credits;
         }
     }
 
-    fn update_credits(&mut self, midgar: &Midgar, _dt: f32) {
-        if midgar.input().was_key_pressed(KeyCode::Return) || midgar.input().was_key_pressed(KeyCode::Tab) {
+    fn update_credits(&mut self, window: &Window, _dt: f32) {
+        if window.keyboard()[Key::Return] == ButtonState::Pressed || window.keyboard()[Key::Tab] == ButtonState::Pressed {
             self.game_state = GameState::StartMenu;
         }
     }
 
-    fn update_how_to_play(&mut self, midgar: &Midgar, _dt: f32) {
-        if midgar.input().was_key_pressed(KeyCode::Return) {
+    fn update_how_to_play(&mut self, window: &Window, _dt: f32) {
+        if window.keyboard()[Key::Return] == ButtonState::Held {
+        //if window.keyboard()[Key::Return] == ButtonState::Pressed {
             self.game_state = GameState::Running;
         }
     }
 
-    fn update_game_over(&mut self, midgar: &Midgar, dt: f32) {
-        if midgar.input().was_key_pressed(KeyCode::R) {
+    fn update_game_over(&mut self, window: &Window, dt: f32) {
+        if window.keyboard()[Key::R] == ButtonState::Pressed {
             self.level = Level::new(1);
             self.restart();
             return;
@@ -119,40 +122,42 @@ impl GameWorld {
         self.the_party.update(dt);
     }
 
-    fn update_won(&mut self, midgar: &Midgar, dt: f32) {
-        if midgar.input().was_key_pressed(KeyCode::N) {
+    fn update_won(&mut self, window: &Window, dt: f32) {
+        if window.keyboard()[Key::N] == ButtonState::Pressed {
             self.next_level();
         }
 
-        self.update_running(midgar, dt);
+        self.update_running(window, dt);
     }
 
-    fn update_running(&mut self, midgar: &Midgar, dt: f32) {
-        if midgar.input().was_key_pressed(KeyCode::R) {
+    fn update_running(&mut self, window: &Window, dt: f32) {
+        if window.keyboard()[Key::R] == ButtonState::Pressed {
             self.restart();
             return;
         }
-        if midgar.input().was_key_pressed(KeyCode::Tab) {
+        if window.keyboard()[Key::Tab] == ButtonState::Pressed {
             self.next_level();
             return;
         }
-        if midgar.input().was_key_pressed(KeyCode::Space) {
+        if window.keyboard()[Key::Space] == ButtonState::Pressed {
             self.dog.woof();
+            self.sounds.play_woof();
         }
 
         // TODO: consider moving this into a poll input method
         // TODO: Clamp dog to level bounds.
+        let keys = window.keyboard();
         let mut dir = Vector2::zero();
-        if midgar.input().is_key_held(self.dog.left_key) && !midgar.input().is_key_held(self.dog.right_key) {
+        if keys[Key::Left].is_down() && !keys[Key::Right].is_down() {
             dir.x -= 1.0;
         }
-        if midgar.input().is_key_held(self.dog.right_key) && !midgar.input().is_key_held(self.dog.left_key) {
+        if keys[Key::Right].is_down() && !keys[Key::Left].is_down() {
             dir.x += 1.0;
         }
-        if midgar.input().is_key_held(self.dog.up_key) && !midgar.input().is_key_held(self.dog.down_key) {
+        if keys[Key::Up].is_down() && !keys[Key::Down].is_down() {
             dir.y -= 1.0;
         }
-        if midgar.input().is_key_held(self.dog.down_key) && !midgar.input().is_key_held(self.dog.up_key) {
+        if keys[Key::Down].is_down() && !keys[Key::Up].is_down() {
             dir.y += 1.0;
         }
         if !dir.is_zero() {
@@ -189,20 +194,25 @@ impl GameWorld {
                     cat.jitter(dt, &self.dog)
                 }
                 CatState::Cannonballing => {
-                    cat.cannonball(&self.level.bounds, dt, &mut self.dog)
+                    if cat.cannonball(&self.level.bounds, dt, &mut self.dog) {
+                        self.dog.hit();
+                        self.sounds.play_yip();
+                    }
                 }
             }
 
             if cat.state == CatState::Idle || cat.state == CatState::InPen || cat.state == CatState::Flee {
                 // Basic meow
                 if cat.meow_time >= cat.meow_interval {
-                    cat.meow();
+                    self.sounds.play_basic_meow();
+                    cat.meow_time = 0.0;
                 }
                 cat.meow_time += dt;
             } else if prev_state != cat.state {
                 // Angry meow
                 if cat.state == CatState::Jittering || cat.state == CatState::Cannonballing {
-                    cat.meow();
+                    self.sounds.play_random_angry_meow();
+                    cat.meow_time = 0.0;
                 }
             }
 

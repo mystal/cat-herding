@@ -1,4 +1,5 @@
 use cgmath::{self, Vector2};
+use quicksilver::graphics::Color;
 use rand::{self, Rng};
 use rand::distributions::{Distribution, Standard, Uniform};
 use rand::seq::SliceRandom;
@@ -28,7 +29,7 @@ impl Distribution<PartyItemKind> for Standard {
 
 pub struct PartyItem {
     pub kind: PartyItemKind,
-    pub color: [f32; 3],
+    pub color: Color,
     pub rotation: f32,
     pub pos: Vector2<f32>,
     pub flip: bool,

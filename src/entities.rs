@@ -1,8 +1,7 @@
 use cgmath::{self, Vector2, InnerSpace};
-use midgar::KeyCode;
+use quicksilver::graphics::Color;
 use rand::distributions::{Distribution, Uniform};
 use rand::seq::SliceRandom;
-use crate::sounds::{Sound, Sounds, AudioController};
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum Facing {
@@ -36,11 +35,15 @@ const FAT_CAT_SPEED: f32 = 100.0;
 const FAT_CAT_RW_RADIUS: f32 = 6.0;
 const FAT_CAT_FLEE_SCALAR: f32 = 1.0;
 
-pub const CAT_COLORS: &[[f32; 3]] = &[
-    [203.0 / 255.0, 219.0 / 255.0, 252.0 / 255.0], // The default purple blue
-    [189.0 / 255.0, 245.0 / 255.0, 242.0 / 255.0], // Robin's egg blue-ish
-    [174.0 / 255.0, 245.0 / 255.0, 184.0 / 255.0], // Pastel green.
-    [255.0 / 255.0, 193.0 / 255.0, 229.0 / 255.0], // Not quite but sort of pink.
+pub const CAT_COLORS: &[Color] = &[
+    // The default purple blue
+    Color { r: 203.0 / 255.0, g: 219.0 / 255.0, b: 252.0 / 255.0, a: 1.0 },
+    // Robin's egg blue-ish
+    Color { r: 189.0 / 255.0, g: 245.0 / 255.0, b: 242.0 / 255.0, a: 1.0 },
+    // Pastel green.
+    Color { r: 174.0 / 255.0, g: 245.0 / 255.0, b: 184.0 / 255.0, a: 1.0 },
+    // Not quite but sort of pink.
+    Color { r: 255.0 / 255.0, g: 193.0 / 255.0, b: 229.0 / 255.0, a: 1.0 },
 ];
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -55,24 +58,15 @@ pub struct Dog {
     pub size: Vector2<f32>,
     pub facing: Facing,
 
-    pub left_key: KeyCode, // TODO: consider breaking this out into control struct
-    pub right_key: KeyCode,
-    pub up_key: KeyCode,
-    pub down_key: KeyCode,
-
     pub dog_state: DogState,
     pub hit_time: f32,
     pub hit_frame: u32,
-
-    pub yip_sound: Sound,
-    pub woof_sound: Sound,
 }
 
 impl Dog {
     pub fn hit(&mut self) {
         self.dog_state = DogState::Blinking(true);
         self.hit_time = HIT_TIME;
-        self.yip_sound.play();
     }
 
     pub fn update(&mut self, dt: f32) {
@@ -98,7 +92,6 @@ impl Dog {
     }
 
     pub fn woof(&mut self) {
-        self.woof_sound.play();
     }
 
     // NOTE: This is similar to Cat::try_move, but lets you move a little further out of the bounds.
@@ -161,11 +154,9 @@ pub struct Cat {
     pub dog_target: Vector2<f32>,
     pub cannonballing_time: f32,
     pub flee_scalar: f32,
-    pub color: [f32; 3],
+    pub color: Color,
     pub meow_interval: f32,
     pub meow_time: f32,
-    pub meow_sound: Sound,
-    pub meow_sound_angry: Sound,
 }
 
 impl Cat {
@@ -193,8 +184,6 @@ impl Cat {
             flee_scalar: BASIC_CAT_FLEE_SCALAR,
             meow_interval: 3.0,
             meow_time: meow_range.sample(&mut rng),
-            meow_sound: Sounds::basic_meow(),
-            meow_sound_angry: Sounds::angry_meow(),
 
             color: *CAT_COLORS.choose(&mut rng).unwrap(),
         }
@@ -225,8 +214,6 @@ impl Cat {
             flee_scalar: KITTEN_FLEE_SCALAR,
             meow_interval: 3.0,
             meow_time: meow_range.sample(&mut rng),
-            meow_sound: Sounds::kitten_meow(),
-            meow_sound_angry: Sounds::angry_meow(),
             color: *CAT_COLORS.choose(&mut rng).unwrap(),
         }
     }
@@ -256,8 +243,6 @@ impl Cat {
             flee_scalar: FAT_CAT_FLEE_SCALAR,
             meow_interval: 3.0,
             meow_time: meow_range.sample(&mut rng),
-            meow_sound: Sounds::fat_meow(),
-            meow_sound_angry: Sounds::angry_meow(),
             color: *CAT_COLORS.choose(&mut rng).unwrap(),
         }
     }
@@ -377,7 +362,7 @@ impl Cat {
         self.decrease_annoyance(dt);
     }
 
-    pub fn cannonball(&mut self, bounds: &Vector2<u32>, dt: f32, dog: &mut Dog) {
+    pub fn cannonball(&mut self, bounds: &Vector2<u32>, dt: f32, dog: &mut Dog) -> bool {
         let target = self.dog_target;
         let v = target * CANNONBALL_SPEED* dt;
         self.velocity = v;
@@ -385,22 +370,7 @@ impl Cat {
 
         self.cannonballing_time -= dt;
 
-        if self.collides_with(dog) {
-            dog.hit();
-        }
-    }
-
-    pub fn meow(&mut self) {
-        match self.state {
-            CatState::Jittering => {
-                self.meow_time = 0.0;
-                self.meow_sound_angry.play();
-            }
-            _ => {
-                self.meow_time = 0.0;
-                self.meow_sound.play();
-            }
-        }
+        self.collides_with(dog)
     }
 
     fn stop_cannonballing(&mut self) {
