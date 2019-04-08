@@ -431,37 +431,46 @@ impl GameRenderer {
             GameState::GameOver => {
                 self.draw_world(world, camera, window);
 
-                //let projection = cgmath::ortho(0.0, config::SCREEN_SIZE.x as f32,
-                //                               config::SCREEN_SIZE.y as f32, 0.0,
-                //                               -1.0, 1.0);
-                //self.sprite.set_projection_matrix(projection);
+                window.set_view(View::new(Rectangle::new_sized((800, 600))));
 
-                //// Draw the party!
-                //for item in &world.the_party.party_items {
-                //    let mut sprite = match item.kind {
-                //        PartyItemKind::BasicCat => self.basic_cat_idle_animation.current_key_frame(self.game_time),
-                //        PartyItemKind::FatCat => self.fat_cat_idle_animation.current_key_frame(self.game_time),
-                //        PartyItemKind::Kitten => self.kitten_idle_animation.current_key_frame(self.game_time),
-                //    }.draw(item.pos.x, item.pos.y);
-                //    sprite.set_scale(cgmath::vec2(3.0, 3.0));
-                //    sprite.set_color(item.color.into());
-                //    sprite.set_flip_x(item.flip);
-                //    sprite.set_rotation(item.rotation);
-                //    self.sprite.draw(&sprite, draw_params, &mut target);
-                //}
+                // Draw the party!
+                for item in &world.the_party.party_items {
+                    let anim = match item.kind {
+                        PartyItemKind::BasicCat => &mut self.basic_cat_idle,
+                        PartyItemKind::FatCat => &mut self.fat_cat_idle,
+                        PartyItemKind::Kitten => &mut self.kitten_idle,
+                    };
+                    self.kitten_idle.execute(|anim| {
+                        let image = anim.current_frame();
+                        let trans = Transform::rotate(item.rotation) * Transform::scale((if item.flip {
+                            -3.0
+                        } else {
+                            3.0
+                        }, 3.0));
+                        window.draw_ex(&image.area().with_center((item.pos.x, item.pos.y)),
+                                       Background::Blended(image, item.color), trans, 0);
+                        Ok(())
+                    });
+                }
 
-                //// Draw a huge corgi!
-                //let mut sprite = self.wizard_dog_run_animation.current_key_frame(self.game_time)
-                //    .draw(config::SCREEN_SIZE.x as f32 / 2.0, config::SCREEN_SIZE.y as f32 / 2.0 - 50.0);
-                //sprite.set_scale(cgmath::vec2(16.0, 16.0));
-                //self.sprite.draw(&sprite, draw_params, &mut target);
+                // Draw a huge corgi!
+                self.wizard_dog_run.execute(|anim| {
+                    let image = anim.current_frame();
+                    let pos = (config::SCREEN_SIZE.x as f32 / 2.0, config::SCREEN_SIZE.y as f32 / 2.0 - 50.0);
+                    let trans = Transform::scale((16.0, 16.0));
+                    window.draw_ex(&image.area().with_center(pos),
+                                   Background::Img(image), trans, 0);
+                    Ok(())
+                });
 
-                //// Draw win text!
+                // Draw win text!
                 //let text = "You are the most magical corgi in all the land!\nPress R to start anew!";
                 //self.text.draw_text(text, &self.font, [0.0, 0.0, 0.0],
                 //                    40, 22.0, 502.0, 800, &projection, &mut target);
                 //self.text.draw_text(text, &self.font, [1.0, 1.0, 1.0],
                 //                    40, 20.0, 500.0, 800, &projection, &mut target);
+
+                window.flush();
             },
         }
     }
