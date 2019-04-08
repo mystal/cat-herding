@@ -56,7 +56,7 @@ impl State for GameApp {
         //    self.sounds.background_music.play();
         //}
         self.world.update(window, dt);
-        self.renderer.tick_animations(0.0);
+        self.renderer.tick_animations(0.0)?;
 
         Ok(())
     }
@@ -67,7 +67,7 @@ impl State for GameApp {
 
         //dbg!(dt);
 
-        self.renderer.render(window, &self.world, &self.camera);
+        self.renderer.render(window, &self.world, &self.camera)?;
 
         //self.last_update = Instant::now();
 

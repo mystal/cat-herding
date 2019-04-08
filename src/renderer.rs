@@ -227,7 +227,7 @@ impl GameRenderer {
         }
     }
 
-    pub fn tick_animations(&mut self, _dt: f32) {
+    pub fn tick_animations(&mut self, _dt: f32) -> Result<()> {
         // NOTE: If you want to actually use dt.
         //self.game_time += dt;
         //while self.game_time >= (1.0 / 60.0) {
@@ -238,67 +238,69 @@ impl GameRenderer {
         self.basic_cat_walk.execute(|anim| {
             anim.tick();
             Ok(())
-        }).expect("Failed to tick basic_cat_walk");
+        })?;
         self.basic_cat_idle.execute(|anim| {
             anim.tick();
             Ok(())
-        }).expect("Failed to tick basic_cat_idle");
+        })?;
         self.basic_cat_ball.execute(|anim| {
             anim.tick();
             Ok(())
-        }).expect("Failed to tick basic_cat_ball");
+        })?;
         self.fat_cat_idle.execute(|anim| {
             anim.tick();
             Ok(())
-        }).expect("Failed to tick fat_cat_idle");
+        })?;
         self.fat_cat_walk.execute(|anim| {
             anim.tick();
             Ok(())
-        }).expect("Failed to tick fat_cat_walk");
+        })?;
         self.fat_cat_ball.execute(|anim| {
             anim.tick();
             Ok(())
-        }).expect("Failed to tick fat_cat_ball");
+        })?;
         self.kitten_idle.execute(|anim| {
             anim.tick();
             Ok(())
-        }).expect("Failed to tick kitten_idle");
+        })?;
         self.kitten_walk.execute(|anim| {
             anim.tick();
             Ok(())
-        }).expect("Failed to tick kitten_walk");
+        })?;
         self.wizard_dog_idle.execute(|anim| {
             anim.tick();
             Ok(())
-        }).expect("Failed to tick wizard_dog_idle");
+        })?;
         self.wizard_dog_run.execute(|anim| {
             anim.tick();
             Ok(())
-        }).expect("Failed to tick wizard_dog_run");
+        })?;
 
         self.linda_cat.execute(|anim| {
             anim.tick();
             Ok(())
-        }).expect("Failed to tick linda_cat");
+        })?;
         self.morgan_kitten.execute(|anim| {
             anim.tick();
             Ok(())
-        }).expect("Failed to tick morgan_kitten");
+        })?;
         self.justin_spin.execute(|anim| {
             anim.tick();
             Ok(())
-        }).expect("Failed to tick justin_spin");
+        })?;
         self.gabe_dog.execute(|anim| {
             anim.tick();
             Ok(())
-        }).expect("Failed to tick gabe_dog");
+        })?;
         self.guest_fox.execute(|anim| {
             anim.tick();
             Ok(())
-        }).expect("Failed to tick guest_fox");
+        })?;
+
+        Ok(())
     }
 
-    pub fn render(&mut self, window: &mut Window, world: &GameWorld, camera: &Camera) {
+    pub fn render(&mut self, window: &mut Window, world: &GameWorld, camera: &Camera) -> Result<()> {
         match world.game_state {
             GameState::StartMenu => {
                 // Draw start menu splash screen!
@@ -306,7 +308,7 @@ impl GameRenderer {
                     window.draw(&image.area().with_center((config::SCREEN_SIZE.x as f32 / 2.0, config::SCREEN_SIZE.y as f32 / 2.0)),
                                 Background::Img(image));
                     Ok(())
-                });
+                })?;
 
                 // Draw blinking text!
                 //if self.game_time.fract() < 0.5 {
@@ -318,39 +320,50 @@ impl GameRenderer {
                 //}
             },
             GameState::Credits => {
-                window.clear(Color::WHITE);
+                window.clear(Color::WHITE)?;
 
                 // Draw our sprites!
-                //let mut sprite = self.linda_cat.current_key_frame(self.game_time)
-                //    .draw(200.0, 50.0);
-                //sprite.set_scale(cgmath::vec2(4.0, 4.0));
-                //sprite.set_flip_x(true);
-                //self.sprite.draw(&sprite, draw_params, &mut target);
+                self.linda_cat.execute(|anim| {
+                    let image = anim.current_frame();
+                    let trans = Transform::scale((-4.0, 4.0));
+                    window.draw_ex(&image.area().with_center((200.0, 50.0)),
+                                   Background::Img(image), trans, 0.0);
+                    Ok(())
+                })?;
 
-                //let mut sprite = self.morgan_kitten.current_key_frame(self.game_time)
-                //    .draw(200.0, 160.0);
-                //sprite.set_scale(cgmath::vec2(4.0, 4.0));
-                //sprite.set_flip_x(true);
-                //self.sprite.draw(&sprite, draw_params, &mut target);
+                self.morgan_kitten.execute(|anim| {
+                    let image = anim.current_frame();
+                    let trans = Transform::scale((-4.0, 4.0));
+                    window.draw_ex(&image.area().with_center((200.0, 160.0)),
+                                   Background::Img(image), trans, 0.0);
+                    Ok(())
+                })?;
 
-                //let mut sprite = self.justin_spin.current_key_frame(self.game_time)
-                //    .draw(200.0, 270.0);
-                //sprite.set_scale(cgmath::vec2(4.0, 4.0));
-                //sprite.set_flip_x(true);
-                //self.sprite.draw(&sprite, draw_params, &mut target);
+                self.justin_spin.execute(|anim| {
+                    let image = anim.current_frame();
+                    let trans = Transform::scale((-4.0, 4.0));
+                    window.draw_ex(&image.area().with_center((200.0, 270.0)),
+                                   Background::Img(image), trans, 0.0);
+                    Ok(())
+                })?;
 
-                //let mut sprite = self.gabe_dog.current_key_frame(self.game_time)
-                //    .draw(200.0, 380.0);
-                //sprite.set_scale(cgmath::vec2(3.5, 3.5));
-                //sprite.set_flip_x(true);
-                //self.sprite.draw(&sprite, draw_params, &mut target);
+                self.gabe_dog.execute(|anim| {
+                    let image = anim.current_frame();
+                    let trans = Transform::scale((-3.5, 3.5));
+                    window.draw_ex(&image.area().with_center((200.0, 380.0)),
+                                   Background::Img(image), trans, 0.0);
+                    Ok(())
+                })?;
 
-                //let mut sprite = self.guest_fox.current_key_frame(self.game_time)
-                //    .draw(200.0, 490.0);
-                //sprite.set_scale(cgmath::vec2(3.0, 3.0));
-                //self.sprite.draw(&sprite, draw_params, &mut target);
+                self.guest_fox.execute(|anim| {
+                    let image = anim.current_frame();
+                    let trans = Transform::scale((-3.0, 3.0));
+                    window.draw_ex(&image.area().with_center((200.0, 490.0)),
+                                   Background::Img(image), trans, 0.0);
+                    Ok(())
+                })?;
 
-                //// TODO: Draw our names!
+                // Draw our names!
                 //self.text.draw_text("Linda Cai", &self.font, [0.0, 0.0, 0.0],
                 //                    40, 300.0, 60.0, 500, &projection, &mut target);
                 //self.text.draw_text("Morgan Tenney", &self.font, [0.0, 0.0, 0.0],
@@ -362,7 +375,7 @@ impl GameRenderer {
                 //self.text.draw_text("Thaminda Edirisooriya", &self.font, [0.0, 0.0, 0.0],
                 //                    30, 300.0, 485.0, 500, &projection, &mut target);
 
-                //// Draw blinking text!
+                // Draw blinking text!
                 //if self.game_time.fract() < 0.5 {
                 //    self.text.draw_text("Press Tab to return!", &self.font, [0.0, 0.0, 0.0],
                 //                        40, 452.0, 542.0, 500, &projection, &mut target);
@@ -378,7 +391,7 @@ impl GameRenderer {
                     window.draw(&image.area().with_center((config::SCREEN_SIZE.x as f32 / 2.0, config::SCREEN_SIZE.y as f32 / 2.0)),
                                 Background::Img(image));
                     Ok(())
-                });
+                })?;
 
                 // Draw corgi idle animation
                 self.wizard_dog_idle.execute(|anim| {
@@ -387,7 +400,7 @@ impl GameRenderer {
                     window.draw_ex(&image.area().with_center((670.0, 50.0)),
                                    Background::Img(image), trans, 0.0);
                     Ok(())
-                });
+                })?;
 
                 // Draw cat animations
                 self.basic_cat_idle.execute(|anim| {
@@ -396,7 +409,7 @@ impl GameRenderer {
                     window.draw_ex(&image.area().with_center((380.0, 340.0)),
                                    Background::Blended(image, CAT_COLORS[0]), trans, 0.0);
                     Ok(())
-                });
+                })?;
 
                 self.fat_cat_idle.execute(|anim| {
                     let image = anim.current_frame();
@@ -404,7 +417,7 @@ impl GameRenderer {
                     window.draw_ex(&image.area().with_center((480.0, 340.0)),
                                    Background::Blended(image, CAT_COLORS[3]), trans, 0.0);
                     Ok(())
-                });
+                })?;
 
                 self.kitten_idle.execute(|anim| {
                     let image = anim.current_frame();
@@ -412,7 +425,7 @@ impl GameRenderer {
                     window.draw_ex(&image.area().with_center((580.0, 340.0)),
                                    Background::Blended(image, CAT_COLORS[2]), trans, 0.0);
                     Ok(())
-                });
+                })?;
 
                 // Draw blinking text!
                 //if self.game_time.fract() < 0.5 {
@@ -422,14 +435,14 @@ impl GameRenderer {
                 //                        40, 450.0, 540.0, 500, &projection, &mut target);
                 //}
 
-                window.flush();
+                window.flush()?;
             },
             GameState::Running | GameState::Won => {
-                self.draw_world(world, camera, window);
-                self.draw_ui(world, window);
+                self.draw_world(world, camera, window)?;
+                self.draw_ui(world, window)?;
             },
             GameState::GameOver => {
-                self.draw_world(world, camera, window);
+                self.draw_world(world, camera, window)?;
 
                 window.set_view(View::new(Rectangle::new_sized((800, 600))));
 
@@ -440,7 +453,7 @@ impl GameRenderer {
                         PartyItemKind::FatCat => &mut self.fat_cat_idle,
                         PartyItemKind::Kitten => &mut self.kitten_idle,
                     };
-                    self.kitten_idle.execute(|anim| {
+                    anim.execute(|anim| {
                         let image = anim.current_frame();
                         let trans = Transform::rotate(item.rotation) * Transform::scale((if item.flip {
                             -3.0
@@ -450,7 +463,7 @@ impl GameRenderer {
                         window.draw_ex(&image.area().with_center((item.pos.x, item.pos.y)),
                                        Background::Blended(image, item.color), trans, 0);
                         Ok(())
-                    });
+                    })?;
                 }
 
                 // Draw a huge corgi!
@@ -461,7 +474,7 @@ impl GameRenderer {
                     window.draw_ex(&image.area().with_center(pos),
                                    Background::Img(image), trans, 0);
                     Ok(())
-                });
+                })?;
 
                 // Draw win text!
                 //let text = "You are the most magical corgi in all the land!\nPress R to start anew!";
@@ -470,13 +483,15 @@ impl GameRenderer {
                 //self.text.draw_text(text, &self.font, [1.0, 1.0, 1.0],
                 //                    40, 20.0, 500.0, 800, &projection, &mut target);
 
-                window.flush();
+                window.flush()?;
             },
         }
+
+        Ok(())
     }
 
-    fn draw_world(&mut self, world: &GameWorld, camera: &Camera, window: &mut Window) {
-        window.clear(Color::WHITE);
+    fn draw_world(&mut self, world: &GameWorld, camera: &Camera, window: &mut Window) -> Result<()> {
+        window.clear(Color::WHITE)?;
 
         window.set_view(View::new(Rectangle::new_sized((400, 300))));
 
@@ -504,7 +519,7 @@ impl GameRenderer {
             window.draw_ex(&image.area().with_center((pos.x, pos.y)),
                            Background::Img(image), Transform::IDENTITY, 1);
             Ok(())
-        });
+        })?;
 
         // Draw cats!
         for cat in &world.cats {
@@ -534,7 +549,7 @@ impl GameRenderer {
                 window.draw_ex(&image.area().with_center((cat.pos.x, cat.pos.y)),
                                Background::Blended(image, color), trans, 2);
                 Ok(())
-            });
+            })?;
         }
 
         // Draw dog, woof.
@@ -555,16 +570,18 @@ impl GameRenderer {
                     window.draw_ex(&image.area().with_center((world.dog.pos.x, world.dog.pos.y)),
                                    Background::Img(image), trans, 3);
                     Ok(())
-                });
+                })?;
             }
             DogState::Blinking(false) => {}
         }
 
-        window.flush();
+        window.flush()?;
+
+        Ok(())
     }
 
 
-    fn draw_ui(&mut self, world: &GameWorld, window: &mut Window) {
+    fn draw_ui(&mut self, world: &GameWorld, window: &mut Window) -> Result<()> {
         window.set_view(View::new(Rectangle::new_sized((800, 600))));
 
         // Draw cat face next to score!
@@ -573,7 +590,7 @@ impl GameRenderer {
             window.draw_ex(&image.area().with_center((660.0, 25.0)),
                            Background::Img(image), trans, 0);
             Ok(())
-        });
+        })?;
 
         // Draw score text!
         //let score_text = format!("{:02}/{:02}", world.cats_scored, world.level.num_cats);
@@ -595,6 +612,8 @@ impl GameRenderer {
         //    _ => {},
         //}
 
-        window.flush();
+        window.flush()?;
+
+        Ok(())
     }
 }
