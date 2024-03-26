@@ -1,4 +1,4 @@
-use std::{ops::Range, time::Duration};
+use std::{f32::consts::PI, ops::Range, time::Duration};
 
 use bevy::prelude::*;
 use bevy_asepritesheet::prelude::*;
@@ -22,13 +22,13 @@ pub const ATTACK_ANIM: AnimHandle = AnimHandle::from_index(2);
 pub const CAT_BOUNDS: f32 = 15.0;
 
 const FLEE_RANGE: f32 = 70.0;
-const FLEE_BUFFER: f32 = 10.0;
+const FLEE_BUFFER: f32 = 20.0;
 
 const JITTER_TIME: f32 = 1.0;
 const CANNONBALL_TIME: f32 = 1.25;
 const CANNONBALL_SPEED: f32 = 240.0;
 
-const MEOW_RANGE: Range<f32> = 5.0..8.0;
+const MEOW_RANGE: Range<f32> = 4.0..8.0;
 
 pub struct CatsPlugin;
 
@@ -54,9 +54,17 @@ pub enum CatKind {
 impl CatKind {
     fn walk_speed(&self) -> f32 {
         match self {
-            CatKind::Basic => 150.0,
-            CatKind::Kitten => 175.0,
-            CatKind::Chonk => 100.0,
+            CatKind::Basic => 50.0,
+            CatKind::Kitten => 60.0,
+            CatKind::Chonk => 35.0,
+        }
+    }
+
+    fn walk_turn_radius(&self) -> f32 {
+        match self {
+            CatKind::Basic => 9.0,
+            CatKind::Kitten => 12.0,
+            CatKind::Chonk => 6.0,
         }
     }
 
@@ -69,10 +77,9 @@ impl CatKind {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Default)]
+#[derive(Clone, PartialEq)]
 pub enum CatState {
-    #[default]
-    Wander,
+    Wander { accel_angle: f32 },
     Flee,
     Jittering { timer: Timer },
     Cannonballing { timer: Timer },
@@ -92,7 +99,7 @@ impl Cat {
         let meow_time = MEOW_RANGE.start + (fastrand::f32() * (MEOW_RANGE.end - MEOW_RANGE.start));
         Self {
             kind,
-            state: CatState::default(),
+            state: CatState::Wander { accel_angle: fastrand::f32() * 2.0 * PI },
             color: Color::WHITE,
             meow_timer: Timer::from_seconds(meow_time, TimerMode::Once),
         }
@@ -213,14 +220,16 @@ pub fn update_cats(
     sounds: Res<SfxAssets>,
     mut cat_q: Query<(Entity, &mut Cat, &mut Annoyance, &Transform, &mut Velocity)>,
     dog_q: Query<(&Dog, &GlobalTransform), Without<Cat>>,
-    cat_box_q: Query<Entity, With<CatBox>>,
+    cat_box_q: Query<(Entity, &GlobalTransform), With<CatBox>>,
 ) {
     let dt = time.delta();
 
     let (dog_recovering, dog_pos) = dog_q.get_single()
         .map(|(dog, trans)| (dog.is_recovering(), Some(trans.translation().truncate())))
         .unwrap_or((false, None));
-    let cat_box = cat_box_q.get_single().ok();
+    let (cat_box, catbox_pos) = cat_box_q.get_single()
+        .map(|(cat_box, trans)| (Some(cat_box), Some(trans.translation().truncate())))
+        .unwrap_or_default();
     for (entity, mut cat, mut annoyance, transform, mut velocity) in cat_q.iter_mut() {
         let pos = transform.translation.truncate();
 
@@ -236,7 +245,7 @@ pub fn update_cats(
 
         // Update cat state first.
         match &cat.state {
-            CatState::Wander => {
+            CatState::Wander { .. } => {
                 if in_pen {
                     cat.state = CatState::InPen;
                 } else if !dog_recovering && dog_in_range {
@@ -255,7 +264,9 @@ pub fn update_cats(
                     audio.play(sound.clone())
                         .with_volume(0.6);
                 } else if !dog_recovering && dog_out_of_range {
-                    cat.state = CatState::Wander;
+                    // Start wandering facing the direction we were fleeing.
+                    let accel_angle = velocity.to_angle() + PI;
+                    cat.state = CatState::Wander { accel_angle };
                 }
             }
             CatState::Jittering { timer } => {
@@ -274,7 +285,9 @@ pub fn update_cats(
             }
             CatState::Cannonballing { timer } => {
                 if timer.finished() {
-                    cat.state = CatState::Wander;
+                    // Start wandering facing the direction we were fleeing.
+                    let accel_angle = velocity.to_angle() + PI;
+                    cat.state = CatState::Wander { accel_angle };
                     annoyance.reset();
                 }
             }
@@ -286,15 +299,34 @@ pub fn update_cats(
             CatState::Flee => {
                 annoyance.increase(dt);
             }
-            CatState::Wander | CatState::InPen => {
+            CatState::Wander { .. } | CatState::InPen => {
                 annoyance.decrease(dt);
             }
             _ => {}
         }
         match &mut cat.state {
-            CatState::Wander => {
+            CatState::Wander { accel_angle }=> {
                 // TODO: Wander logic.
-                **velocity = Vec2::ZERO;
+
+                // Update the desired wander acceleration by a random amount.
+                let accel_angle_delta = ((fastrand::f32() * 2.0) - 1.0) * 18.0;
+                *accel_angle += accel_angle_delta.to_radians();
+
+                // Update velocity to move a bit more towards the desired angle.
+                **velocity += Vec2::from_angle(*accel_angle) * cat.kind.walk_turn_radius();
+                // And set speed to walk speed.
+                **velocity = velocity.normalize() * cat.kind.walk_speed();
+
+                // apply repulsive force if we're close to the cat box
+                if let Some(catbox_pos) = catbox_pos {
+                    let box_to_cat = pos - catbox_pos;
+                    // if box_to_cat.magnitude() < (cat_box.size.x + self.radius) {
+                    //     self.velocity = (self.velocity + box_to_cat.normalize() * 150.0 / box_to_cat.magnitude()).normalize() * self.speed / 3.0;
+                    // }
+                    // v = self.velocity;
+
+                    // **velocity = Vec2::ZERO;
+                }
             }
             CatState::Flee => {
                 if let Some(dog_pos) = dog_pos {
@@ -321,7 +353,7 @@ fn cat_animation(
     // Update which animation is playing based on state and velocity.
     for (mut animator, mut sprite, cat, velocity) in cat_q.iter_mut() {
         match &cat.state {
-            CatState::Wander => {
+            CatState::Wander { .. }=> {
                 if **velocity == Vec2::ZERO {
                     if !animator.is_cur_anim(IDLE_ANIM) {
                         animator.set_anim(IDLE_ANIM);
